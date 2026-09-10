@@ -250,6 +250,9 @@
             stores: [
                 {
                     name: 'Main Store - Flagship Location',
+                    date: '2026-10-24',
+                    startTime: '11:00',
+                    endTime: '16:00',
                     dateTime: 'Saturday, October 24, 2026 | 11:00 AM – 4:00 PM',
                     address: '1234 Commerce St, Suite 100, Dallas, TX 75201'
                 }
@@ -517,6 +520,60 @@
             updatePreview();
         }
 
+        function formatTime12h(timeStr) {
+            if (!timeStr) return '';
+            const [hStr, mStr] = timeStr.split(':');
+            let h = parseInt(hStr, 10);
+            if (isNaN(h)) return '';
+            const m = mStr || '00';
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            if (h === 0) h = 12;
+            return `${h}:${m} ${ampm}`;
+        }
+
+        function formatDateNice(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const day = parseInt(parts[2], 10);
+            const d = new Date(year, month, day);
+            if (isNaN(d.getTime())) return '';
+            
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            
+            return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+        }
+
+        function updateStorePicker(index, field, value) {
+            currentState.stores[index][field] = value;
+            const store = currentState.stores[index];
+            const dateFormatted = formatDateNice(store.date);
+            const startFormatted = formatTime12h(store.startTime);
+            const endFormatted = formatTime12h(store.endTime);
+            
+            let result = '';
+            if (dateFormatted) {
+                result += dateFormatted;
+            }
+            if (startFormatted || endFormatted) {
+                if (result) result += ' | ';
+                if (startFormatted && endFormatted) {
+                    result += `${startFormatted} – ${endFormatted}`;
+                } else {
+                    result += (startFormatted || endFormatted);
+                }
+            }
+            if (result) {
+                store.dateTime = result;
+            }
+            renderStoreControls();
+            updatePreview();
+        }
+
         function renderStoreControls() {
             const container = document.getElementById('stores-container');
             if (!container) return;
@@ -524,12 +581,12 @@
 
             currentState.stores.forEach((store, index) => {
                 const div = document.createElement('div');
-                div.className = 'p-3 bg-gray-950 border border-gray-800 rounded-lg space-y-2 relative group';
+                div.className = 'p-3 bg-gray-950 border border-gray-800 rounded-lg space-y-2.5 relative group';
                 div.innerHTML = `
                     <div class="flex items-center justify-between">
                         <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-400">Store #${index + 1}</span>
                         ${currentState.stores.length > 1 ? `
-                            <button onclick="removeStore(${index})" class="text-xs text-rose-400 hover:text-rose-300 transition-colors">
+                            <button onclick="removeStore(${index})" class="text-xs text-rose-400 hover:text-rose-300 transition-colors" title="Delete store">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         ` : ''}
@@ -538,10 +595,35 @@
                         <label class="text-[10px] text-gray-500 font-semibold block mb-0.5">Store Name / Location Label</label>
                         <input type="text" value="${escapeHtml(store.name)}" oninput="updateStore(${index}, 'name', this.value)" placeholder="e.g. Main Location - Downtown" class="w-full bg-gray-900 border border-gray-800 rounded px-2.5 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-amber-500">
                     </div>
-                    <div>
-                        <label class="text-[10px] text-gray-500 font-semibold block mb-0.5">Event Date & Time</label>
-                        <input type="text" value="${escapeHtml(store.dateTime)}" oninput="updateStore(${index}, 'dateTime', this.value)" placeholder="e.g. Saturday, Oct 24 | 11am - 4pm" class="w-full bg-gray-900 border border-gray-800 rounded px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-amber-500">
+                    
+                    <!-- Date & Time Pickers Grid -->
+                    <div class="space-y-1.5 pt-1 border-t border-gray-800/60">
+                        <label class="text-[10px] text-amber-400/90 font-bold block flex items-center gap-1">
+                            <i class="fa-regular fa-calendar-days text-[10px]"></i> Date & Time Selectors
+                        </label>
+                        <div class="grid grid-cols-1 space-y-1.5">
+                            <div>
+                                <span class="text-[9px] text-gray-500 block">Date</span>
+                                <input type="date" value="${store.date || ''}" onchange="updateStorePicker(${index}, 'date', this.value)" class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-500 [color-scheme:dark]">
+                            </div>
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <div>
+                                    <span class="text-[9px] text-gray-500 block">Start Time</span>
+                                    <input type="time" value="${store.startTime || ''}" onchange="updateStorePicker(${index}, 'startTime', this.value)" class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-500 [color-scheme:dark]">
+                                </div>
+                                <div>
+                                    <span class="text-[9px] text-gray-500 block">End Time</span>
+                                    <input type="time" value="${store.endTime || ''}" onchange="updateStorePicker(${index}, 'endTime', this.value)" class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-500 [color-scheme:dark]">
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-semibold block mb-0.5">Formatted Date & Time Preview (Editable)</label>
+                        <input type="text" value="${escapeHtml(store.dateTime)}" oninput="updateStore(${index}, 'dateTime', this.value)" placeholder="e.g. Saturday, Oct 24 | 11:00 AM – 4:00 PM" class="w-full bg-gray-900 border border-gray-800 rounded px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-amber-500">
+                    </div>
+
                     <div>
                         <label class="text-[10px] text-gray-500 font-semibold block mb-0.5">Store Address</label>
                         <input type="text" value="${escapeHtml(store.address)}" oninput="updateStore(${index}, 'address', this.value)" placeholder="e.g. 1234 Commerce St, Dallas, TX" class="w-full bg-gray-900 border border-gray-800 rounded px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-amber-500">
@@ -559,7 +641,10 @@
         function addStore() {
             currentState.stores.push({
                 name: `Store Location #${currentState.stores.length + 1}`,
-                dateTime: 'Saturday, Oct 24 | 11:00 AM – 4:00 PM',
+                date: '2026-10-24',
+                startTime: '11:00',
+                endTime: '16:00',
+                dateTime: 'Saturday, October 24, 2026 | 11:00 AM – 4:00 PM',
                 address: 'Address Line Here...'
             });
             renderStoreControls();
